@@ -37,8 +37,19 @@ pub fn main() !void {
         const distance = @abs(id - right_list.items[index]);
         total_distance += distance;
     }
-
     print("The total distance is: {}\n", .{total_distance});
+
+    var total_score: i32 = 0;
+    for (left_list.items) |left_id| {
+        var n: u8 = 0;
+        for (right_list.items) |right_id| {
+            if (right_id == left_id) {
+                n += 1;
+            }
+        }
+        total_score += n * left_id;
+    }
+    print("The total similarity score is: {}\n", .{total_score});
 }
 
 fn compareIds(_: void, left_id: i32, right_id: i32) bool {
