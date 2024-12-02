@@ -10,9 +10,9 @@ pub fn main() !void {
     var n_safe: i16 = 0;
     while (try reader.readUntilDelimiterOrEof(&line_buffer, '\n')) |report| {
         var iterator = std.mem.splitScalar(u8, report, ' ');
-        var previous_level = try std.fmt.parseInt(i8, iterator.next().?, 10);
+        var previous_level = try parseInt(iterator.next().?);
         var previous_difference: ?i8 = null;
-        var current_level = try std.fmt.parseInt(i8, iterator.next().?, 10);
+        var current_level = try parseInt(iterator.next().?);
         var is_safe = true;
         while (true) {
             const current_difference = current_level - previous_level;
@@ -26,7 +26,7 @@ pub fn main() !void {
             }
             previous_difference = current_difference;
             previous_level = current_level;
-            current_level = try std.fmt.parseInt(i8, iterator.next() orelse break, 10);
+            current_level = try parseInt(iterator.next() orelse break);
         }
         if (is_safe) {
             n_safe += 1;
@@ -37,4 +37,8 @@ pub fn main() !void {
 
 pub fn haveSameSign(a: i8, b: i8) bool {
     return (a < 0 and b > 0) or (a > 0 and b < 0);
+}
+
+pub fn parseInt(raw: []const u8) !i8 {
+    return std.fmt.parseInt(i8, raw, 10);
 }
