@@ -16,7 +16,7 @@ pub fn main() !void {
         var is_safe = true;
         while (true) {
             const current_difference = current_level - previous_level;
-            if (@abs(current_difference) < 1 or @abs(current_difference) > 3) {
+            if (isSafeDifference(current_level, previous_level)) {
                 is_safe = false;
                 break;
             }
@@ -41,4 +41,9 @@ pub fn haveSameSign(a: i8, b: i8) bool {
 
 pub fn parseInt(raw: []const u8) !i8 {
     return std.fmt.parseInt(i8, raw, 10);
+}
+
+pub fn isSafeDifference(level1: i8, level2: i8) bool {
+    const difference = level1 - level2;
+    return @abs(difference) < 1 or @abs(difference) > 3;
 }
