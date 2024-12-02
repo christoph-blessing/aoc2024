@@ -12,9 +12,9 @@ pub fn main() !void {
         var iterator = std.mem.splitScalar(u8, report, ' ');
         var previous_level = try std.fmt.parseInt(i8, iterator.next().?, 10);
         var previous_difference: ?i8 = null;
+        var current_level = try std.fmt.parseInt(i8, iterator.next().?, 10);
         var is_safe = true;
-        while (iterator.next()) |level| {
-            const current_level: i8 = try std.fmt.parseInt(i8, level, 10);
+        while (true) {
             const current_difference = current_level - previous_level;
             if (@abs(current_difference) < 1 or @abs(current_difference) > 3) {
                 is_safe = false;
@@ -26,6 +26,7 @@ pub fn main() !void {
             }
             previous_difference = current_difference;
             previous_level = current_level;
+            current_level = try std.fmt.parseInt(i8, iterator.next() orelse break, 10);
         }
         if (is_safe) {
             n_safe += 1;
