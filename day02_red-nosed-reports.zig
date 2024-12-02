@@ -16,14 +16,11 @@ pub fn main() !void {
         var is_safe = true;
         while (true) {
             const current_difference = current_level - previous_level;
-            if (isSafeDifference(current_level, previous_level)) {
-                is_safe = false;
-                break;
+            if (previous_difference == null) {
+                previous_difference = current_difference;
             }
-            if (previous_difference != null and haveSameSign(current_difference, previous_difference.?)) {
-                is_safe = false;
-                break;
-            }
+            is_safe = IsSafe(current_level, previous_level, previous_difference.?);
+            if (!is_safe) break;
             previous_difference = current_difference;
             previous_level = current_level;
             current_level = try parseInt(iterator.next() orelse break);
@@ -46,4 +43,14 @@ pub fn parseInt(raw: []const u8) !i8 {
 pub fn isSafeDifference(level1: i8, level2: i8) bool {
     const difference = level1 - level2;
     return @abs(difference) < 1 or @abs(difference) > 3;
+}
+
+pub fn IsSafe(current_level: i8, previous_level: i8, previous_difference: i8) bool {
+    if (isSafeDifference(current_level, previous_level)) {
+        return false;
+    }
+    if (haveSameSign(current_level - previous_level, previous_difference)) {
+        return false;
+    }
+    return true;
 }
