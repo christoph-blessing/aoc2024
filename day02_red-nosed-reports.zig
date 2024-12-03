@@ -4,53 +4,51 @@ pub fn main() !void {
     const file = try std.fs.cwd().openFile("data/day02.txt", .{ .mode = .read_only });
     defer file.close();
 
+    const allocator = std.heap.page_allocator;
     var buffered_reader = std.io.bufferedReader(file.reader());
     var reader = buffered_reader.reader();
     var line_buffer: [1024]u8 = undefined;
-    var n_safe: i16 = 0;
-    while (try reader.readUntilDelimiterOrEof(&line_buffer, '\n')) |report| {
-        var iterator = std.mem.splitScalar(u8, report, ' ');
-        var previous_level = try parseInt(iterator.next().?);
-        var previous_difference: ?i8 = null;
-        var current_level = try parseInt(iterator.next().?);
-        var is_safe = true;
-        while (true) {
-            const current_difference = current_level - previous_level;
-            if (previous_difference == null) {
-                previous_difference = current_difference;
-            }
-            is_safe = IsSafe(current_level, previous_level, previous_difference.?);
-            if (!is_safe) break;
-            previous_difference = current_difference;
-            previous_level = current_level;
-            current_level = try parseInt(iterator.next() orelse break);
+    var n_safe: u16 = 0;
+    while (try reader.readUntilDelimiterOrEof(&line_buffer, '\n')) |report_str| {
+        var report = std.ArrayList(i8).init(allocator);
+        defer report.deinit();
+        var iterator = std.mem.splitScalar(u8, report_str, ' ');
+        while (iterator.next()) |level_str| {
+            try report.append(try parseInt(level_str));
         }
-        if (is_safe) {
+
+        if (isSafe(report)) {
             n_safe += 1;
         }
     }
-    std.debug.print("Number of safe reports: {}\n", .{n_safe});
+    std.debug.print("{}", .{n_safe});
 }
 
-pub fn haveSameSign(a: i8, b: i8) bool {
-    return (a < 0 and b > 0) or (a > 0 and b < 0);
+pub fn isSafe(report: std.ArrayList(i8)) bool {
+    var previous_pointer: u8 = 0;
+    var current_pointer: u8 = 1;
+    var previous_diff: i8 = report.items[current_pointer] - report.items[previous_pointer];
+    var is_safe: bool = true;
+    while (true) {
+        if (current_pointer == report.items.len) break;
+        const previous_level = report.items[previous_pointer];
+        const current_level = report.items[current_pointer];
+        const current_diff = current_level - previous_level;
+        if (@abs(current_diff) < 1 or @abs(current_diff) > 3) {
+            is_safe = false;
+            break;
+        }
+        if ((current_diff < 0 and previous_diff > 0) or (current_diff > 0 and previous_diff < 0)) {
+            is_safe = false;
+            break;
+        }
+        previous_pointer = current_pointer;
+        current_pointer += 1;
+        previous_diff = current_diff;
+    }
+    return is_safe;
 }
 
 pub fn parseInt(raw: []const u8) !i8 {
     return std.fmt.parseInt(i8, raw, 10);
-}
-
-pub fn isSafeDifference(level1: i8, level2: i8) bool {
-    const difference = level1 - level2;
-    return @abs(difference) < 1 or @abs(difference) > 3;
-}
-
-pub fn IsSafe(current_level: i8, previous_level: i8, previous_difference: i8) bool {
-    if (isSafeDifference(current_level, previous_level)) {
-        return false;
-    }
-    if (haveSameSign(current_level - previous_level, previous_difference)) {
-        return false;
-    }
-    return true;
 }
