@@ -19,9 +19,20 @@ pub fn main() !void {
 
         if (isSafe(report)) {
             n_safe += 1;
+            continue;
+        }
+
+        for (report.items, 0..) |_, index| {
+            var cloned_report = try report.clone();
+            defer cloned_report.deinit();
+            _ = cloned_report.orderedRemove(index);
+            if (isSafe(cloned_report)) {
+                n_safe += 1;
+                break;
+            }
         }
     }
-    std.debug.print("{}", .{n_safe});
+    std.debug.print("Number of safe reports: {}", .{n_safe});
 }
 
 pub fn isSafe(report: std.ArrayList(i8)) bool {
