@@ -39,7 +39,8 @@ pub fn main() !void {
     var update = std.ArrayList(usize).init(allocator);
     defer update.deinit();
 
-    var n: usize = 0;
+    var n_correct: usize = 0;
+    var n_ordered: usize = 0;
     while (try reader.readUntilDelimiterOrEof(&line_buffer, '\n')) |line| {
         update.clearAndFree();
         var iterator = std.mem.splitScalar(u8, line, ',');
@@ -48,27 +49,58 @@ pub fn main() !void {
             try update.append(number);
         }
 
-        var is_correct = true;
-        for (rules.items) |rule| {
-            var before_index: ?usize = null;
-            var after_index: ?usize = null;
-            for (update.items, 0..) |number, index| {
-                if (number == rule.before) {
-                    before_index = index;
-                } else if (number == rule.after) {
-                    after_index = index;
-                }
-            }
-            if (before_index == null or after_index == null) continue;
-            if (before_index.? > after_index.?) {
-                is_correct = false;
-            }
+        const broken_rule = find_broken_rule(&update, &rules);
+        if (broken_rule == null) {
+            n_correct += update.items[@divFloor(update.items.len, 2)];
+            continue;
         }
 
-        if (!is_correct) continue;
-
-        n += update.items[@divFloor(update.items.len, 2)];
+        order(&update, &rules);
+        n_ordered += update.items[@divFloor(update.items.len, 2)];
     }
 
-    print("Sum of page numbers: {}\n", .{n});
+    print("Sum of correct page numbers: {}\n", .{n_correct});
+    print("Sum of ordered page numbers: {}\n", .{n_ordered});
+}
+
+fn order(update: *std.ArrayList(usize), rules: *std.ArrayList(Rule)) void {
+    while (true) {
+        const broken_rule = find_broken_rule(update, rules);
+        if (broken_rule == null) {
+            break;
+        }
+        var before_index: ?usize = null;
+        var after_index: ?usize = null;
+        for (update.items, 0..) |number, index| {
+            if (number == broken_rule.?.before) {
+                before_index = index;
+            } else if (number == broken_rule.?.after) {
+                after_index = index;
+            }
+        }
+        const temp = update.items[before_index.?];
+        update.items[before_index.?] = update.items[after_index.?];
+        update.items[after_index.?] = temp;
+    }
+}
+
+fn find_broken_rule(update: *std.ArrayList(usize), rules: *std.ArrayList(Rule)) ?Rule {
+    var broken_rule: ?Rule = null;
+    for (rules.items) |rule| {
+        var before_index: ?usize = null;
+        var after_index: ?usize = null;
+        for (update.items, 0..) |number, index| {
+            if (number == rule.before) {
+                before_index = index;
+            } else if (number == rule.after) {
+                after_index = index;
+            }
+        }
+        if (before_index == null or after_index == null) continue;
+        if (before_index.? > after_index.?) {
+            broken_rule = rule;
+            break;
+        }
+    }
+    return broken_rule;
 }
