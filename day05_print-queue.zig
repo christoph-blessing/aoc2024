@@ -49,13 +49,13 @@ pub fn main() !void {
             try update.append(number);
         }
 
-        const broken_rule = find_broken_rule(&update, &rules);
+        const broken_rule = find_broken_rule(update.items, rules.items);
         if (broken_rule == null) {
             n_correct += update.items[@divFloor(update.items.len, 2)];
             continue;
         }
 
-        order(&update, &rules);
+        order(&update, rules.items);
         n_ordered += update.items[@divFloor(update.items.len, 2)];
     }
 
@@ -63,44 +63,48 @@ pub fn main() !void {
     print("Sum of ordered page numbers: {}\n", .{n_ordered});
 }
 
-fn order(update: *std.ArrayList(usize), rules: *std.ArrayList(Rule)) void {
+fn order(update: *std.ArrayList(usize), rules: []const Rule) void {
     while (true) {
-        const broken_rule = find_broken_rule(update, rules);
-        if (broken_rule == null) {
-            break;
-        }
-        var before_index: ?usize = null;
-        var after_index: ?usize = null;
-        for (update.items, 0..) |number, index| {
-            if (number == broken_rule.?.before) {
-                before_index = index;
-            } else if (number == broken_rule.?.after) {
-                after_index = index;
-            }
-        }
-        const temp = update.items[before_index.?];
-        update.items[before_index.?] = update.items[after_index.?];
-        update.items[after_index.?] = temp;
+        const broken_rule = find_broken_rule(update.items, rules) orelse break;
+        const indices = get_indices(update.items, broken_rule).?;
+        const temp = update.items[indices.before];
+        update.items[indices.before] = update.items[indices.after];
+        update.items[indices.after] = temp;
     }
 }
 
-fn find_broken_rule(update: *std.ArrayList(usize), rules: *std.ArrayList(Rule)) ?Rule {
+fn find_broken_rule(update: []const usize, rules: []const Rule) ?Rule {
     var broken_rule: ?Rule = null;
-    for (rules.items) |rule| {
+    for (rules) |rule| {
         var before_index: ?usize = null;
         var after_index: ?usize = null;
-        for (update.items, 0..) |number, index| {
+        for (update, 0..) |number, index| {
             if (number == rule.before) {
                 before_index = index;
             } else if (number == rule.after) {
                 after_index = index;
             }
         }
-        if (before_index == null or after_index == null) continue;
-        if (before_index.? > after_index.?) {
+        const indices = get_indices(update, rule) orelse continue;
+        if (indices.before > indices.after) {
             broken_rule = rule;
             break;
         }
     }
     return broken_rule;
+}
+
+fn get_indices(update: []const usize, rule: Rule) ?struct { before: usize, after: usize } {
+    var before_index: ?usize = null;
+    var after_index: ?usize = null;
+    for (update, 0..) |number, index| {
+        if (number == rule.before) {
+            before_index = index;
+        } else if (number == rule.after) {
+            after_index = index;
+        }
+        if (before_index != null and after_index != null) break;
+    }
+    if (before_index == null or after_index == null) return null;
+    return .{ .before = before_index.?, .after = after_index.? };
 }
