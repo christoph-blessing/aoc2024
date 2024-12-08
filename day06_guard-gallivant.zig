@@ -68,13 +68,11 @@ const PatrolIterator = struct {
     size: Coord,
     fn next(self: *PatrolIterator) ?PatrolState {
         while (true) {
-            const position = self.initial.position;
-            const direction = self.initial.direction;
-            if (position.row >= self.size.row) return null;
-            if (position.col >= self.size.col) return null;
-            const candidate = get_candidate(position, direction) orelse return null;
+            if (self.initial.position.row >= self.size.row) return null;
+            if (self.initial.position.col >= self.size.col) return null;
+            const candidate = get_candidate(self.initial) orelse return null;
             if (is_obstructed(self.obstructions, candidate)) {
-                self.initial.direction = turn(direction);
+                self.initial.direction = turn(self.initial.direction);
             } else {
                 self.initial.position = candidate;
                 return self.initial;
@@ -83,21 +81,21 @@ const PatrolIterator = struct {
     }
 };
 
-fn get_candidate(current: Coord, direction: Direction) ?Coord {
-    switch (direction) {
+fn get_candidate(current: PatrolState) ?Coord {
+    switch (current.direction) {
         Direction.up => {
-            if (current.row == 0) return null;
-            return Coord{ .row = current.row - 1, .col = current.col };
+            if (current.position.row == 0) return null;
+            return Coord{ .row = current.position.row - 1, .col = current.position.col };
         },
         Direction.right => {
-            return Coord{ .row = current.row, .col = current.col + 1 };
+            return Coord{ .row = current.position.row, .col = current.position.col + 1 };
         },
         Direction.down => {
-            return Coord{ .row = current.row + 1, .col = current.col };
+            return Coord{ .row = current.position.row + 1, .col = current.position.col };
         },
         Direction.left => {
-            if (current.col == 0) return null;
-            return Coord{ .row = current.row, .col = current.col - 1 };
+            if (current.position.col == 0) return null;
+            return Coord{ .row = current.position.row, .col = current.position.col - 1 };
         },
     }
 }
