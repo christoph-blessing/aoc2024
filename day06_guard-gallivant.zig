@@ -3,6 +3,7 @@ const print = std.debug.print;
 
 const Coord = struct { row: usize, col: usize };
 const Direction = enum { up, down, left, right };
+const PatrolState = struct { position: Coord, direction: Direction };
 
 pub fn main() !void {
     const file = try std.fs.cwd().openFile("data/day06.txt", .{ .mode = .read_only });
@@ -12,7 +13,7 @@ pub fn main() !void {
     var reader = buffered_reader.reader();
     var line_buffer: [1024]u8 = undefined;
 
-    var guard: Coord = undefined;
+    var initial: PatrolState = undefined;
 
     const allocator = std.heap.page_allocator;
     var obstructions = std.ArrayList(Coord).init(allocator);
@@ -25,7 +26,7 @@ pub fn main() !void {
         if (i_row == 0) n_cols = line.len;
         for (line, 0..) |element, i_col| {
             if (element == '^') {
-                guard = Coord{ .row = i_row, .col = i_col };
+                initial = PatrolState{ .position = Coord{ .row = i_row, .col = i_col }, .direction = Direction.up };
             }
             if (element == '#') {
                 try obstructions.append(Coord{ .row = i_row, .col = i_col });
@@ -38,25 +39,39 @@ pub fn main() !void {
 
     var visited = std.AutoHashMap(Coord, bool).init(allocator);
     defer visited.deinit();
-    try visited.put(guard, true);
+    try visited.put(initial.position, true);
 
-    var direction = Direction.up;
-    while (true) {
-        if (guard.row >= n_rows) break;
-        if (guard.col >= n_cols) break;
-        const candidate = next(guard, direction) orelse break;
-        if (is_obstructed(obstructions.items, candidate)) {
-            direction = turn(direction);
-        } else {
-            guard = candidate;
-            try visited.put(guard, true);
-        }
+    var patrol_iterator = PatrolIterator{ .initial = initial, .obstructions = obstructions.items, .n_rows = n_rows, .n_cols = n_cols };
+    while (patrol_iterator.next()) |state| {
+        try visited.put(state.position, true);
     }
 
     print("Number of visited positions: {}\n", .{visited.count()});
 }
 
-fn next(current: Coord, direction: Direction) ?Coord {
+const PatrolIterator = struct {
+    initial: PatrolState,
+    obstructions: []const Coord,
+    n_rows: usize,
+    n_cols: usize,
+    fn next(self: *PatrolIterator) ?PatrolState {
+        while (true) {
+            const position = self.initial.position;
+            const direction = self.initial.direction;
+            if (position.row >= self.n_rows) return null;
+            if (position.col >= self.n_cols) return null;
+            const candidate = get_candidate(position, direction) orelse return null;
+            if (is_obstructed(self.obstructions, candidate)) {
+                self.initial.direction = turn(direction);
+            } else {
+                self.initial.position = candidate;
+                return self.initial;
+            }
+        }
+    }
+};
+
+fn get_candidate(current: Coord, direction: Direction) ?Coord {
     switch (direction) {
         Direction.up => {
             if (current.row == 0) return null;
