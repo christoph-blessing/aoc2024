@@ -1,5 +1,6 @@
 const std = @import("std");
 const print = std.debug.print;
+const allocator = std.heap.page_allocator;
 
 const Coord = struct { row: usize, col: usize };
 const Direction = enum { up, down, left, right };
@@ -15,7 +16,6 @@ pub fn main() !void {
 
     var initial: PatrolState = undefined;
 
-    const allocator = std.heap.page_allocator;
     var obstructions = std.ArrayList(Coord).init(allocator);
     defer obstructions.deinit();
 
@@ -47,6 +47,18 @@ pub fn main() !void {
     }
 
     print("Number of visited positions: {}\n", .{visited.count()});
+}
+
+fn is_looping(initial: PatrolState, obstructions: []const Coord, n_rows: usize, n_cols: usize) !bool {
+    var iterator = PatrolIterator{ .initial = initial, .obstructions = obstructions, .n_rows = n_rows, .n_cols = n_cols };
+    var visited = std.AutoHashMap(PatrolState, bool).init(allocator);
+    defer visited.deinit();
+
+    while (iterator.next()) |state| {
+        if (visited.contains(state)) return true;
+        try visited.put(state, true);
+    }
+    return false;
 }
 
 const PatrolIterator = struct {
