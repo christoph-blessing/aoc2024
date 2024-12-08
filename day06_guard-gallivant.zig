@@ -36,12 +36,13 @@ pub fn main() !void {
     }
 
     const n_rows: usize = i_row;
+    const size = Coord{ .row = n_rows, .col = n_cols };
 
     var visited = std.AutoHashMap(Coord, bool).init(allocator);
     defer visited.deinit();
     try visited.put(initial.position, true);
 
-    var patrol_iterator = PatrolIterator{ .initial = initial, .obstructions = obstructions.items, .n_rows = n_rows, .n_cols = n_cols };
+    var patrol_iterator = PatrolIterator{ .initial = initial, .obstructions = obstructions.items, .size = size };
     while (patrol_iterator.next()) |state| {
         try visited.put(state.position, true);
     }
@@ -49,8 +50,8 @@ pub fn main() !void {
     print("Number of visited positions: {}\n", .{visited.count()});
 }
 
-fn is_looping(initial: PatrolState, obstructions: []const Coord, n_rows: usize, n_cols: usize) !bool {
-    var iterator = PatrolIterator{ .initial = initial, .obstructions = obstructions, .n_rows = n_rows, .n_cols = n_cols };
+fn is_looping(initial: PatrolState, obstructions: []const Coord, size: Coord) !bool {
+    var iterator = PatrolIterator{ .initial = initial, .obstructions = obstructions, .size = size };
     var visited = std.AutoHashMap(PatrolState, bool).init(allocator);
     defer visited.deinit();
 
@@ -64,14 +65,13 @@ fn is_looping(initial: PatrolState, obstructions: []const Coord, n_rows: usize, 
 const PatrolIterator = struct {
     initial: PatrolState,
     obstructions: []const Coord,
-    n_rows: usize,
-    n_cols: usize,
+    size: Coord,
     fn next(self: *PatrolIterator) ?PatrolState {
         while (true) {
             const position = self.initial.position;
             const direction = self.initial.direction;
-            if (position.row >= self.n_rows) return null;
-            if (position.col >= self.n_cols) return null;
+            if (position.row >= self.size.row) return null;
+            if (position.col >= self.size.col) return null;
             const candidate = get_candidate(position, direction) orelse return null;
             if (is_obstructed(self.obstructions, candidate)) {
                 self.initial.direction = turn(direction);
