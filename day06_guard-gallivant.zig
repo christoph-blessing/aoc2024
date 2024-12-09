@@ -38,16 +38,30 @@ pub fn main() !void {
     const n_rows: usize = i_row;
     const size = Coord{ .row = n_rows, .col = n_cols };
 
-    var visited = std.AutoHashMap(Coord, bool).init(allocator);
+    var visited = std.AutoHashMap(PatrolState, bool).init(allocator);
     defer visited.deinit();
-    try visited.put(initial.position, true);
+    try visited.put(initial, true);
+
+    var looping_obstructions = std.AutoHashMap(Coord, bool).init(allocator);
+    defer looping_obstructions.deinit();
 
     var patrol_iterator = PatrolIterator{ .initial = initial, .obstructions = obstructions.items, .size = size };
     while (patrol_iterator.next()) |state| {
-        try visited.put(state.position, true);
+        try visited.put(state, true);
+
+        const candidate = get_candidate(state) orelse continue;
+        if (candidate.row == initial.position.row and candidate.col == initial.position.col) continue;
+        if (is_obstructed(obstructions.items, candidate)) continue;
+        var modified = try obstructions.clone();
+        defer modified.deinit();
+        try modified.append(candidate);
+        if (try is_looping(initial, modified.items, size)) {
+            try looping_obstructions.put(candidate, true);
+        }
     }
 
     print("Number of visited positions: {}\n", .{visited.count()});
+    print("Number of looping positions: {}\n", .{looping_obstructions.count()});
 }
 
 fn is_looping(initial: PatrolState, obstructions: []const Coord, size: Coord) !bool {
