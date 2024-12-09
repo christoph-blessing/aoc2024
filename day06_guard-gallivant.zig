@@ -7,7 +7,7 @@ const Direction = enum { up, down, left, right };
 const PatrolState = struct { position: Coord, direction: Direction };
 
 pub fn main() !void {
-    const file = try std.fs.cwd().openFile("data/day06_example.txt", .{ .mode = .read_only });
+    const file = try std.fs.cwd().openFile("data/day06.txt", .{ .mode = .read_only });
     defer file.close();
 
     var buffered_reader = std.io.bufferedReader(file.reader());
@@ -75,8 +75,8 @@ const PatrolIterator = struct {
                 self.initial.direction = turn(self.initial.direction);
             } else {
                 self.initial.position = candidate;
-                return self.initial;
             }
+            return self.initial;
         }
     }
 };
