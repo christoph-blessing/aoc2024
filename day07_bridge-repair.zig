@@ -19,7 +19,7 @@ pub fn main() !void {
         const equation = result[0];
         print("{}\n", .{equation});
 
-        const combinations = try get_combinations(allocator, "*+", equation.numbers.len - 1);
+        const combinations = try get_combinations(allocator, "*+|", equation.numbers.len - 1);
         defer {
             for (combinations) |combination| {
                 allocator.free(combination);
@@ -37,6 +37,18 @@ pub fn main() !void {
                     },
                     '+' => {
                         actual += equation.numbers[index];
+                    },
+                    '|' => {
+                        const number_u8 = try std.fmt.allocPrint(allocator, "{}", .{equation.numbers[index]});
+                        defer allocator.free(number_u8);
+
+                        const old_actual_u8 = try std.fmt.allocPrint(allocator, "{}", .{actual});
+                        defer allocator.free(old_actual_u8);
+
+                        const actual_u8 = try std.mem.concat(allocator, u8, &[_][]u8{ old_actual_u8, number_u8 });
+                        defer allocator.free(actual_u8);
+
+                        actual = try std.fmt.parseInt(usize, actual_u8, 10);
                     },
                     else => unreachable,
                 }
