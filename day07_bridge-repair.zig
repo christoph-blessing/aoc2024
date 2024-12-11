@@ -19,76 +19,33 @@ pub fn main() !void {
         const equation = result[0];
         print("{}\n", .{equation});
 
-        const combinations = try get_combinations(allocator, "*+|", equation.numbers.len - 1);
-        defer {
-            for (combinations) |combination| {
-                allocator.free(combination);
-            }
-            allocator.free(combinations);
-        }
-        for (combinations) |combination| {
-            var actual = equation.numbers[0];
-            print("({}", .{equation.numbers[0]});
-            for (combination, 1..) |operator, index| {
-                print(" {c} {}", .{ operator, equation.numbers[index] });
-                switch (operator) {
-                    '*' => {
-                        actual *= equation.numbers[index];
-                    },
-                    '+' => {
-                        actual += equation.numbers[index];
-                    },
-                    '|' => {
-                        const number_u8 = try std.fmt.allocPrint(allocator, "{}", .{equation.numbers[index]});
-                        defer allocator.free(number_u8);
-
-                        const old_actual_u8 = try std.fmt.allocPrint(allocator, "{}", .{actual});
-                        defer allocator.free(old_actual_u8);
-
-                        const actual_u8 = try std.mem.concat(allocator, u8, &[_][]u8{ old_actual_u8, number_u8 });
-                        defer allocator.free(actual_u8);
-
-                        actual = try std.fmt.parseInt(usize, actual_u8, 10);
-                    },
-                    else => unreachable,
-                }
-            }
-            print(" = {})", .{actual});
-            if (actual == equation.result) {
-                sum += equation.result;
-                print(" == {}\n", .{equation.result});
-                break;
-            }
-            print(" != {}\n", .{equation.result});
+        const start = equation.numbers[0];
+        const numbers = equation.numbers[1..];
+        if (can_reach(start, numbers, equation.result)) {
+            sum += equation.result;
         }
     }
     print("The total calibration result is: {}\n", .{sum});
 }
 
-fn get_combinations(allocator: std.mem.Allocator, elements: []const u8, repetitions: usize) ![]const []const u8 {
-    var combinations = std.ArrayList([]const u8).init(allocator);
-    for (elements) |element| {
-        if (repetitions == 1) {
-            var combination = try allocator.alloc(u8, 1);
-            combination[0] = element;
-            try combinations.append(combination);
-            continue;
-        }
-        const sub_combinations = try get_combinations(allocator, elements, repetitions - 1);
-        defer {
-            for (sub_combinations) |sub_combination| {
-                allocator.free(sub_combination);
-            }
-            allocator.free(sub_combinations);
-        }
-        for (sub_combinations) |sub_combination| {
-            var combination = try allocator.alloc(u8, sub_combination.len + 1);
-            combination[0] = element;
-            std.mem.copyForwards(u8, combination[1..], sub_combination);
-            try combinations.append(combination);
-        }
+fn can_reach(start: usize, numbers: []const usize, target: usize) bool {
+    if (numbers.len == 0) return start == target;
+
+    if (start > target) return false;
+
+    const first = numbers[0];
+    const rest = numbers[1..];
+    return can_reach(start * first, rest, target) or can_reach(start + first, rest, target) or can_reach(concat(start, first), rest, target);
+}
+
+fn concat(a: usize, b: usize) usize {
+    var offset: usize = 1;
+
+    while (offset <= b) {
+        offset *= 10;
     }
-    return combinations.toOwnedSlice();
+
+    return a * offset + b;
 }
 
 fn parse_equation(allocator: std.mem.Allocator, line: []u8) !struct { Equation, []const usize } {
