@@ -65,15 +65,7 @@ pub fn main() !void {
             const row_offset = row_a - row_b;
             const col_offset = col_a - col_b;
 
-            const antinode_a_row_isize = row_a + row_offset;
-            const antinode_a_col_isize = col_a + col_offset;
-
-            var antinode_a: ?Loc = null;
-            if (antinode_a_row_isize >= 0 and antinode_a_col_isize >= 0) {
-                const antinode_a_row: usize = @intCast(antinode_a_row_isize);
-                const antinode_a_col: usize = @intCast(antinode_a_col_isize);
-                antinode_a = Loc{ .row = antinode_a_row, .col = antinode_a_col };
-            }
+            const antinode_a = foo(combination[0], row_offset, col_offset);
 
             if (antinode_a) |antinode| {
                 if (antinode.row < n_rows and antinode.col < n_cols) {
@@ -81,15 +73,7 @@ pub fn main() !void {
                 }
             }
 
-            const antinode_b_row_isize = row_b - row_offset;
-            const antinode_b_col_isize = col_b - col_offset;
-
-            var antinode_b: ?Loc = null;
-            if (antinode_b_row_isize >= 0 and antinode_b_col_isize >= 0) {
-                const antinode_b_row: usize = @intCast(antinode_b_row_isize);
-                const antinode_b_col: usize = @intCast(antinode_b_col_isize);
-                antinode_b = Loc{ .row = antinode_b_row, .col = antinode_b_col };
-            }
+            const antinode_b = foo(combination[1], -row_offset, -col_offset);
 
             if (antinode_b) |antinode| {
                 if (antinode.row < n_rows and antinode.col < n_cols) {
@@ -100,6 +84,23 @@ pub fn main() !void {
     }
 
     print("Number of locations with antinodes: {}\n", .{antinodes.count()});
+}
+
+fn foo(loc: Loc, row_offset: isize, col_offset: isize) ?Loc {
+    const row: isize = @intCast(loc.row);
+    const col: isize = @intCast(loc.col);
+
+    const antinode_row_isize = row + row_offset;
+    const antinode_col_isize = col + col_offset;
+
+    var antinode: ?Loc = null;
+    if (antinode_row_isize >= 0 and antinode_col_isize >= 0) {
+        const antinode_row: usize = @intCast(antinode_row_isize);
+        const antinode_col: usize = @intCast(antinode_col_isize);
+        antinode = Loc{ .row = antinode_row, .col = antinode_col };
+    }
+
+    return antinode;
 }
 
 fn get_combinations(allocator: std.mem.Allocator, locs: []const Loc) ![]const []const Loc {
