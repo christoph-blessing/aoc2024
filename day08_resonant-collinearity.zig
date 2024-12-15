@@ -34,6 +34,7 @@ pub fn main() !void {
     }
 
     const n_rows: usize = i_row;
+    const bounds = [2]usize{ n_rows, n_cols };
 
     defer {
         var iterator = antennas.valueIterator();
@@ -47,7 +48,7 @@ pub fn main() !void {
 
     var iterator = antennas.iterator();
     while (iterator.next()) |entry| {
-        const combinations = try get_combinations(allocator, entry.value_ptr.items);
+        const combinations = try getCombinations(allocator, entry.value_ptr.items);
         defer {
             for (combinations) |combination| {
                 allocator.free(combination);
@@ -56,7 +57,8 @@ pub fn main() !void {
         }
 
         for (combinations) |combination| {
-            const combination_antinodes = try get_antinodes(allocator, combination[0], combination[1], n_rows, n_cols);
+            const array: [2]Loc = .{ combination[0], combination[1] };
+            const combination_antinodes = try getAntinodes(allocator, array, bounds, 0, null);
             for (combination_antinodes) |antinode| try antinodes.put(antinode, true);
         }
     }
@@ -64,12 +66,12 @@ pub fn main() !void {
     print("Number of locations with antinodes: {}\n", .{antinodes.count()});
 }
 
-fn get_antinodes(allocator: std.mem.Allocator, a: Loc, b: Loc, n_rows: usize, n_cols: usize) ![]const Loc {
-    const row_a: isize = @intCast(a.row);
-    const col_a: isize = @intCast(a.col);
+fn getAntinodes(allocator: std.mem.Allocator, antennas: [2]Loc, bounds: [2]usize, start: usize, end: ?usize) ![]const Loc {
+    const row_a: isize = @intCast(antennas[0].row);
+    const col_a: isize = @intCast(antennas[0].col);
 
-    const row_b: isize = @intCast(b.row);
-    const col_b: isize = @intCast(b.col);
+    const row_b: isize = @intCast(antennas[1].row);
+    const col_b: isize = @intCast(antennas[1].col);
 
     const row_offset = row_a - row_b;
     const col_offset = col_a - col_b;
@@ -77,29 +79,59 @@ fn get_antinodes(allocator: std.mem.Allocator, a: Loc, b: Loc, n_rows: usize, n_
     var antinodes = std.ArrayList(Loc).init(allocator);
     errdefer antinodes.deinit();
 
-    var n: isize = 0;
-    while (true) : (n += 1) {
-        const antinode = offset_loc(a, n * row_offset, n * col_offset) orelse break;
-        if (antinode.row >= n_rows or antinode.col >= n_cols) break;
-        try antinodes.append(antinode);
+    const positive_offset = [2]isize{ row_offset, col_offset };
+    const positive_antinodes = try getDirAntinodes(allocator, antennas[0], positive_offset, bounds, start, end);
+    defer allocator.free(positive_antinodes);
+    try antinodes.appendSlice(positive_antinodes);
+
+    const negative_offset = [2]isize{ -row_offset, -col_offset };
+    const negative_antinodes = try getDirAntinodes(allocator, antennas[1], negative_offset, bounds, start, end);
+    defer allocator.free(negative_antinodes);
+    try antinodes.appendSlice(negative_antinodes);
+
+    return try antinodes.toOwnedSlice();
+}
+
+const IntegerIterator = struct {
+    current: usize,
+    end: ?usize,
+
+    pub fn init(start: usize, end: ?usize) IntegerIterator {
+        return IntegerIterator{ .current = start, .end = end };
     }
 
-    n = 1;
-    while (true) : (n += 1) {
-        const antinode = offset_loc(a, -(n * row_offset), -(n * col_offset)) orelse break;
-        if (antinode.row >= n_rows or antinode.col >= n_cols) break;
+    pub fn next(self: *IntegerIterator) ?usize {
+        if (self.end) |end| {
+            if (self.current > end) return null;
+        }
+        const temp = self.current;
+        self.current += 1;
+        return temp;
+    }
+};
+
+fn getDirAntinodes(allocator: std.mem.Allocator, antenna: Loc, offset: [2]isize, bounds: [2]usize, start: usize, end: ?usize) ![]const Loc {
+    var antinodes = std.ArrayList(Loc).init(allocator);
+    errdefer antinodes.deinit();
+
+    var multipliers = IntegerIterator.init(start, end);
+
+    while (multipliers.next()) |multiplier| {
+        const multiplier_isize: isize = @intCast(multiplier);
+        const antinode = offsetLoc(antenna, [2]isize{ multiplier_isize * offset[0], multiplier_isize * offset[1] }) orelse break;
+        if (antinode.row >= bounds[0] or antinode.col >= bounds[1]) break;
         try antinodes.append(antinode);
     }
 
     return try antinodes.toOwnedSlice();
 }
 
-fn offset_loc(loc: Loc, row_offset: isize, col_offset: isize) ?Loc {
+fn offsetLoc(loc: Loc, offset: [2]isize) ?Loc {
     const row: isize = @intCast(loc.row);
     const col: isize = @intCast(loc.col);
 
-    const antinode_row_isize = row + row_offset;
-    const antinode_col_isize = col + col_offset;
+    const antinode_row_isize = row + offset[0];
+    const antinode_col_isize = col + offset[1];
 
     var antinode: ?Loc = null;
     if (antinode_row_isize >= 0 and antinode_col_isize >= 0) {
@@ -111,7 +143,7 @@ fn offset_loc(loc: Loc, row_offset: isize, col_offset: isize) ?Loc {
     return antinode;
 }
 
-fn get_combinations(allocator: std.mem.Allocator, locs: []const Loc) ![]const []const Loc {
+fn getCombinations(allocator: std.mem.Allocator, locs: []const Loc) ![]const []const Loc {
     var combinations = std.ArrayList([]const Loc).init(allocator);
 
     if (locs.len == 0) return try combinations.toOwnedSlice();
@@ -132,7 +164,7 @@ fn get_combinations(allocator: std.mem.Allocator, locs: []const Loc) ![]const []
     }
     defer allocator.free(sub_locs);
 
-    const sub_combinations = try get_combinations(allocator, sub_locs);
+    const sub_combinations = try getCombinations(allocator, sub_locs);
     try combinations.appendSlice(sub_combinations);
 
     return try combinations.toOwnedSlice();
