@@ -56,37 +56,47 @@ pub fn main() !void {
         }
 
         for (combinations) |combination| {
-            const row_a: isize = @intCast(combination[0].row);
-            const col_a: isize = @intCast(combination[0].col);
-
-            const row_b: isize = @intCast(combination[1].row);
-            const col_b: isize = @intCast(combination[1].col);
-
-            const row_offset = row_a - row_b;
-            const col_offset = col_a - col_b;
-
-            const antinode_a = foo(combination[0], row_offset, col_offset);
-
-            if (antinode_a) |antinode| {
-                if (antinode.row < n_rows and antinode.col < n_cols) {
-                    try antinodes.put(antinode, true);
-                }
-            }
-
-            const antinode_b = foo(combination[1], -row_offset, -col_offset);
-
-            if (antinode_b) |antinode| {
-                if (antinode.row < n_rows and antinode.col < n_cols) {
-                    try antinodes.put(antinode, true);
-                }
-            }
+            const combination_antinodes = try get_antinodes(allocator, combination[0], combination[1], n_rows, n_cols);
+            for (combination_antinodes) |antinode| try antinodes.put(antinode, true);
         }
     }
 
     print("Number of locations with antinodes: {}\n", .{antinodes.count()});
 }
 
-fn foo(loc: Loc, row_offset: isize, col_offset: isize) ?Loc {
+fn get_antinodes(allocator: std.mem.Allocator, a: Loc, b: Loc, n_rows: usize, n_cols: usize) ![]const Loc {
+    const row_a: isize = @intCast(a.row);
+    const col_a: isize = @intCast(a.col);
+
+    const row_b: isize = @intCast(b.row);
+    const col_b: isize = @intCast(b.col);
+
+    const row_offset = row_a - row_b;
+    const col_offset = col_a - col_b;
+
+    const antinode_a = offset_loc(a, row_offset, col_offset);
+
+    var antinodes = std.ArrayList(Loc).init(allocator);
+    errdefer antinodes.deinit();
+
+    if (antinode_a) |antinode| {
+        if (antinode.row < n_rows and antinode.col < n_cols) {
+            try antinodes.append(antinode);
+        }
+    }
+
+    const antinode_b = offset_loc(b, -row_offset, -col_offset);
+
+    if (antinode_b) |antinode| {
+        if (antinode.row < n_rows and antinode.col < n_cols) {
+            try antinodes.append(antinode);
+        }
+    }
+
+    return try antinodes.toOwnedSlice();
+}
+
+fn offset_loc(loc: Loc, row_offset: isize, col_offset: isize) ?Loc {
     const row: isize = @intCast(loc.row);
     const col: isize = @intCast(loc.col);
 
