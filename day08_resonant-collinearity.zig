@@ -4,6 +4,14 @@ const print = std.debug.print;
 const Loc = struct { row: usize, col: usize };
 
 pub fn main() !void {
+    const part1_answer = try countAntinodes(1, 1);
+    print("Part 1 answer: {}\n", .{part1_answer});
+
+    const part2_answer = try countAntinodes(0, null);
+    print("Part 2 answer: {}\n", .{part2_answer});
+}
+
+fn countAntinodes(start: usize, end: ?usize) !usize {
     const file = try std.fs.cwd().openFile("data/day08.txt", .{ .mode = .read_only });
     defer file.close();
 
@@ -58,12 +66,12 @@ pub fn main() !void {
 
         for (combinations) |combination| {
             const array: [2]Loc = .{ combination[0], combination[1] };
-            const combination_antinodes = try getAntinodes(allocator, array, bounds, 0, null);
+            const combination_antinodes = try getAntinodes(allocator, array, bounds, start, end);
             for (combination_antinodes) |antinode| try antinodes.put(antinode, true);
         }
     }
 
-    print("Number of locations with antinodes: {}\n", .{antinodes.count()});
+    return antinodes.count();
 }
 
 fn getAntinodes(allocator: std.mem.Allocator, antennas: [2]Loc, bounds: [2]usize, start: usize, end: ?usize) ![]const Loc {
