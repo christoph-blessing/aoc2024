@@ -1,25 +1,25 @@
 const std = @import("std");
 const print = std.debug.print;
 
-const Loc = struct { row: usize, col: usize };
-
 pub fn main() !void {
-    const part1_answer = try countAntinodes(1, 1);
+    const allocator = std.heap.page_allocator;
+    const filepath = "data/day08.txt";
+
+    const part1_answer = try countAntinodes(allocator, filepath, 1, 1);
     print("Part 1 answer: {}\n", .{part1_answer});
 
-    const part2_answer = try countAntinodes(0, null);
+    const part2_answer = try countAntinodes(allocator, filepath, 0, null);
     print("Part 2 answer: {}\n", .{part2_answer});
 }
 
-fn countAntinodes(start: usize, end: ?usize) !usize {
-    const file = try std.fs.cwd().openFile("data/day08.txt", .{ .mode = .read_only });
+fn countAntinodes(allocator: std.mem.Allocator, filepath: []const u8, start: usize, end: ?usize) !usize {
+    const file = try std.fs.cwd().openFile(filepath, .{ .mode = .read_only });
     defer file.close();
 
     var buffered_reader = std.io.bufferedReader(file.reader());
     var reader = buffered_reader.reader();
     var line_buffer: [1024]u8 = undefined;
 
-    const allocator = std.heap.page_allocator;
     var antennas = std.AutoHashMap(u8, std.ArrayList(Loc)).init(allocator);
     defer antennas.deinit();
 
@@ -73,6 +73,8 @@ fn countAntinodes(start: usize, end: ?usize) !usize {
 
     return antinodes.count();
 }
+
+const Loc = struct { row: usize, col: usize };
 
 fn getAntinodes(allocator: std.mem.Allocator, antennas: [2]Loc, bounds: [2]usize, start: usize, end: ?usize) ![]const Loc {
     const row_a: isize = @intCast(antennas[0].row);
