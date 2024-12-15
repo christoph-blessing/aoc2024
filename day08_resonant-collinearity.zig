@@ -74,23 +74,21 @@ fn get_antinodes(allocator: std.mem.Allocator, a: Loc, b: Loc, n_rows: usize, n_
     const row_offset = row_a - row_b;
     const col_offset = col_a - col_b;
 
-    const antinode_a = offset_loc(a, row_offset, col_offset);
-
     var antinodes = std.ArrayList(Loc).init(allocator);
     errdefer antinodes.deinit();
 
-    if (antinode_a) |antinode| {
-        if (antinode.row < n_rows and antinode.col < n_cols) {
-            try antinodes.append(antinode);
-        }
+    var n: isize = 0;
+    while (true) : (n += 1) {
+        const antinode = offset_loc(a, n * row_offset, n * col_offset) orelse break;
+        if (antinode.row >= n_rows or antinode.col >= n_cols) break;
+        try antinodes.append(antinode);
     }
 
-    const antinode_b = offset_loc(b, -row_offset, -col_offset);
-
-    if (antinode_b) |antinode| {
-        if (antinode.row < n_rows and antinode.col < n_cols) {
-            try antinodes.append(antinode);
-        }
+    n = 1;
+    while (true) : (n += 1) {
+        const antinode = offset_loc(a, -(n * row_offset), -(n * col_offset)) orelse break;
+        if (antinode.row >= n_rows or antinode.col >= n_cols) break;
+        try antinodes.append(antinode);
     }
 
     return try antinodes.toOwnedSlice();
