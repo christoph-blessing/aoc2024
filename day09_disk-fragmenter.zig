@@ -29,6 +29,12 @@ pub fn main() !void {
         is_file = !is_file;
     }
 
+    const part1_checksum = part1(disk);
+
+    print("Part 1 checksum: {}\n", .{part1_checksum});
+}
+
+fn part1(disk: std.ArrayList(?usize)) usize {
     var i_file: usize = disk.items.len;
     var i_free: usize = 0;
     while (i_file > 0) {
@@ -48,5 +54,5 @@ pub fn main() !void {
         checksum += i * file_id;
     }
 
-    print("Checksum: {}\n", .{checksum});
+    return checksum;
 }
