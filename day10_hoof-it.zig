@@ -37,18 +37,23 @@ pub fn main() !void {
         map.deinit();
     }
 
-    var sum: usize = 0;
+    var total_score: usize = 0;
+    var total_rating: usize = 0;
     for (trailheads.items) |trailhead| {
         const peaks = try findPeaks(allocator, map.items, trailhead);
         defer allocator.free(peaks);
 
         var unique_peaks = std.AutoHashMap(Loc, bool).init(allocator);
+        defer unique_peaks.deinit();
+
         for (peaks) |peak| try unique_peaks.put(peak, true);
 
-        sum += unique_peaks.count();
+        total_score += unique_peaks.count();
+        total_rating += peaks.len;
     }
 
-    print("Total score: {}\n", .{sum});
+    print("Total score: {}\n", .{total_score});
+    print("Total rating: {}\n", .{total_rating});
 }
 
 fn findPeaks(allocator: std.mem.Allocator, map: [][]const usize, current: Loc) ![]const Loc {
