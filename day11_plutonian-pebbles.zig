@@ -9,7 +9,7 @@ pub fn main() !void {
     var stone_bytes = std.ArrayList(u8).init(allocator);
     defer stone_bytes.deinit();
 
-    var stones = std.ArrayList(usize).init(allocator);
+    var stones = std.AutoHashMap(usize, usize).init(allocator);
     defer stones.deinit();
 
     while (true) {
@@ -22,46 +22,94 @@ pub fn main() !void {
             const stone = try std.fmt.parseInt(usize, stone_bytes.items, 10);
             stone_bytes.clearAndFree();
 
-            try stones.append(stone);
+            const result = try stones.getOrPut(stone);
+            if (result.found_existing) {
+                result.value_ptr.* += 1;
+                continue;
+            }
 
+            result.value_ptr.* = 1;
             continue;
         }
 
         try stone_bytes.append(byte);
     }
 
-    const blink_count: usize = 25;
+    const part1_count = try countStones(allocator, &stones, 25);
+    print("Number of stones after 25 blinks: {}\n", .{part1_count});
+
+    const part2_count = try countStones(allocator, &stones, 75);
+    print("Number of stones after 75 blinks: {}\n", .{part2_count});
+}
+
+fn countStones(allocator: std.mem.Allocator, stones: *std.AutoHashMap(usize, usize), blink_count: usize) !usize {
+    var stones_clone = try stones.clone();
+    defer stones_clone.deinit();
+
     var blink_index: usize = 0;
     while (blink_index < blink_count) : (blink_index += 1) {
-        var clone = try stones.clone();
-        defer clone.deinit();
-        stones.clearAndFree();
+        var changes = std.AutoHashMap(usize, usize).init(allocator);
+        defer changes.deinit();
 
-        for (clone.items) |stone| {
-            if (stone == 0) {
-                try stones.append(1);
-                continue;
+        var iterator = stones_clone.iterator();
+        while (iterator.next()) |entry| {
+            const stone = entry.key_ptr.*;
+            const count = entry.value_ptr.*;
+
+            const new_stones = try updateStone(allocator, stone);
+            for (new_stones) |new_stone| {
+                const result = try changes.getOrPut(new_stone);
+                if (!result.found_existing) {
+                    result.value_ptr.* = count;
+                    continue;
+                }
+                result.value_ptr.* += count;
             }
+        }
 
-            const digit_count = getDigitCount(stone);
+        stones_clone.clearAndFree();
 
-            if (digit_count % 2 != 0) {
-                try stones.append(stone * 2024);
-                continue;
-            }
-
-            const digits = try stoneToDigits(allocator, stone, digit_count);
-            defer allocator.free(digits);
-
-            const first_stone = try std.fmt.parseInt(usize, digits[0 .. digit_count / 2], 10);
-            try stones.append(first_stone);
-
-            const second_stone = try std.fmt.parseInt(usize, digits[digit_count / 2 ..], 10);
-            try stones.append(second_stone);
+        iterator = changes.iterator();
+        while (iterator.next()) |entry| {
+            try stones_clone.put(entry.key_ptr.*, entry.value_ptr.*);
         }
     }
 
-    print("Number of stones: {}\n", .{stones.items.len});
+    var value_iterator = stones_clone.valueIterator();
+    var total: usize = 0;
+    while (value_iterator.next()) |count| {
+        total += count.*;
+    }
+
+    return total;
+}
+
+fn updateStone(allocator: std.mem.Allocator, stone: usize) ![]const usize {
+    var stones = std.ArrayList(usize).init(allocator);
+    errdefer stones.deinit();
+
+    if (stone == 0) {
+        try stones.append(1);
+        return try stones.toOwnedSlice();
+    }
+
+    const digit_count = getDigitCount(stone);
+
+    if (digit_count % 2 != 0) {
+        try stones.append(stone * 2024);
+        return try stones.toOwnedSlice();
+    }
+
+    const digits = try stoneToDigits(allocator, stone, digit_count);
+    defer allocator.free(digits);
+
+    const first_stone = try std.fmt.parseInt(usize, digits[0 .. digit_count / 2], 10);
+    try stones.append(first_stone);
+
+    const second_stone = try std.fmt.parseInt(usize, digits[digit_count / 2 ..], 10);
+    try stones.append(second_stone);
+
+    return try stones.toOwnedSlice();
 }
 
 fn getDigitCount(stone: usize) usize {
