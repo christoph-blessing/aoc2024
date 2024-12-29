@@ -9,7 +9,8 @@ pub fn main() !void {
     var line_buffer: [1024]u8 = undefined;
 
     var token_count: usize = 0;
-    while (true) {
+    var is_done = false;
+    while (!is_done) {
         const line_a = (try reader.readUntilDelimiterOrEof(&line_buffer, '\n')).?;
         const button_a = try parse(line_a);
 
@@ -19,7 +20,9 @@ pub fn main() !void {
         const prize_line = (try reader.readUntilDelimiterOrEof(&line_buffer, '\n')).?;
         const prize = try parse(prize_line);
 
-        _ = (try reader.readUntilDelimiterOrEof(&line_buffer, '\n')) orelse break;
+        _ = (try reader.readUntilDelimiterOrEof(&line_buffer, '\n')) orelse {
+            is_done = true;
+        };
 
         const count_b = @divFloor((prize.x * button_a.y - prize.y * button_a.x), (button_b.x * button_a.y - button_b.y * button_a.x));
         if (count_b < 0 or count_b > 100) continue;
