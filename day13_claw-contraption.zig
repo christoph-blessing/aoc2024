@@ -8,6 +8,9 @@ pub fn main() !void {
     var reader = buffered_reader.reader();
     var line_buffer: [1024]u8 = undefined;
 
+    const offset: isize = 10_000_000_000_000;
+    const maybe_count_limit: ?usize = null;
+
     var token_count: usize = 0;
     var is_done = false;
     while (!is_done) {
@@ -18,17 +21,20 @@ pub fn main() !void {
         const button_b = try parse(line_b);
 
         const prize_line = (try reader.readUntilDelimiterOrEof(&line_buffer, '\n')).?;
-        const prize = try parse(prize_line);
+        const temp = try parse(prize_line);
+        const prize = Vector{ .x = temp.x + offset, .y = temp.y + offset };
 
         _ = (try reader.readUntilDelimiterOrEof(&line_buffer, '\n')) orelse {
             is_done = true;
         };
 
         const count_b = @divFloor((prize.x * button_a.y - prize.y * button_a.x), (button_b.x * button_a.y - button_b.y * button_a.x));
-        if (count_b < 0 or count_b > 100) continue;
+        if (count_b < 0) continue;
+        if (maybe_count_limit) |count_limit| if (count_b > count_limit) continue;
 
         const count_a = @divFloor((prize.y - button_b.y * count_b), button_a.y);
-        if (count_a < 0 or count_a > 100) continue;
+        if (count_a < 0) continue;
+        if (maybe_count_limit) |count_limit| if (count_a > count_limit) continue;
 
         if (count_a * button_a.x + count_b * button_b.x != prize.x) continue;
         if (count_a * button_a.y + count_b * button_b.y != prize.y) continue;
