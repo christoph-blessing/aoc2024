@@ -1,15 +1,22 @@
 const std = @import("std");
 
 pub fn main() !void {
-    const file = try std.fs.cwd().openFile("data/day13.txt", .{ .mode = .read_only });
+    const filepath = "data/day13.txt";
+
+    const part1_count = try foo(filepath, 0, 100);
+    std.debug.print("Part 1 token count: {}\n", .{part1_count});
+
+    const part2_count = try foo(filepath, 10_000_000_000_000, null);
+    std.debug.print("Part 2 token count: {}\n", .{part2_count});
+}
+
+fn foo(filepath: []const u8, offset: isize, maybe_count_limit: ?usize) !usize {
+    const file = try std.fs.cwd().openFile(filepath, .{ .mode = .read_only });
     defer file.close();
 
     var buffered_reader = std.io.bufferedReader(file.reader());
     var reader = buffered_reader.reader();
     var line_buffer: [1024]u8 = undefined;
-
-    const offset: isize = 10_000_000_000_000;
-    const maybe_count_limit: ?usize = null;
 
     var token_count: usize = 0;
     var is_done = false;
@@ -44,7 +51,7 @@ pub fn main() !void {
         token_count += 3 * count_a_usize + count_b_usize;
     }
 
-    std.debug.print("Token count: {}\n", .{token_count});
+    return token_count;
 }
 
 const Vector = struct { x: isize, y: isize };
