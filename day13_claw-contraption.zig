@@ -3,14 +3,14 @@ const std = @import("std");
 pub fn main() !void {
     const filepath = "data/day13.txt";
 
-    const part1_count = try foo(filepath, 0, 100);
+    const part1_count = try countTokens(filepath, 0, 100);
     std.debug.print("Part 1 token count: {}\n", .{part1_count});
 
-    const part2_count = try foo(filepath, 10_000_000_000_000, null);
+    const part2_count = try countTokens(filepath, 10_000_000_000_000, null);
     std.debug.print("Part 2 token count: {}\n", .{part2_count});
 }
 
-fn foo(filepath: []const u8, offset: isize, maybe_count_limit: ?usize) !usize {
+fn countTokens(filepath: []const u8, offset: isize, maybe_count_limit: ?usize) !usize {
     const file = try std.fs.cwd().openFile(filepath, .{ .mode = .read_only });
     defer file.close();
 
