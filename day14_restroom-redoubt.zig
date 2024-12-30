@@ -3,8 +3,12 @@ const std = @import("std");
 const Vector = struct { x: isize, y: isize };
 const Robot = struct { position: Vector, velocity: Vector };
 
+const filepath = "data/day14.txt";
+const space_size = Vector{ .x = 101, .y = 103 };
+const step_count: usize = 100;
+
 pub fn main() !void {
-    const file = try std.fs.cwd().openFile("data/day14.txt", .{ .mode = .read_only });
+    const file = try std.fs.cwd().openFile(filepath, .{ .mode = .read_only });
     defer file.close();
 
     var buffered_reader = std.io.bufferedReader(file.reader());
@@ -29,8 +33,6 @@ pub fn main() !void {
         try robots.append(Robot{ .position = position, .velocity = velocity });
     }
 
-    const step_count: usize = 100;
-    const space_size = Vector{ .x = 101, .y = 103 };
     var step_index: usize = 0;
     while (step_index < step_count) : (step_index += 1) {
         for (robots.items, 0..) |robot, robot_index| {
@@ -72,4 +74,23 @@ pub fn main() !void {
     }
 
     std.debug.print("Safety factor: {}\n", .{safety_factor});
+}
+
+fn printSpace(robots: []Robot) void {
+    var space: [space_size.y][space_size.x]u8 = undefined;
+    for (&space) |*row| {
+        for (row) |*element| {
+            element.* = '.';
+        }
+    }
+
+    for (robots) |robot| {
+        const x_usize: usize = @intCast(robot.position.x);
+        const y_usize: usize = @intCast(robot.position.y);
+        space[y_usize][x_usize] = 'X';
+    }
+
+    for (space) |row| {
+        std.debug.print("{s}\n", .{row});
+    }
 }
