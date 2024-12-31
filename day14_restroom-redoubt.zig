@@ -33,20 +33,12 @@ pub fn main() !void {
         try robots.append(Robot{ .position = position, .velocity = velocity });
     }
 
-    var step_index: usize = 0;
-    while (step_index < step_count) : (step_index += 1) {
-        for (robots.items, 0..) |robot, robot_index| {
-            var new_x = robot.position.x + robot.velocity.x;
-            if (new_x < 0) new_x += space_size.x;
-            if (new_x >= space_size.x) new_x -= space_size.x;
+    for (robots.items, 0..) |robot, index| {
+        const new_x = @mod(robot.position.x + robot.velocity.x * step_count, space_size.x);
+        const new_y = @mod(robot.position.y + robot.velocity.y * step_count, space_size.y);
 
-            var new_y = robot.position.y + robot.velocity.y;
-            if (new_y < 0) new_y += space_size.y;
-            if (new_y >= space_size.y) new_y -= space_size.y;
-
-            const updated_robot = Robot{ .position = Vector{ .x = new_x, .y = new_y }, .velocity = robot.velocity };
-            robots.items[robot_index] = updated_robot;
-        }
+        const updated_robot = Robot{ .position = Vector{ .x = new_x, .y = new_y }, .velocity = robot.velocity };
+        robots.items[index] = updated_robot;
     }
 
     var quadrant_counts = [_]usize{ 0, 0, 0, 0 };
