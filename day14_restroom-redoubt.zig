@@ -33,12 +33,28 @@ pub fn main() !void {
         try robots.append(Robot{ .position = position, .velocity = velocity });
     }
 
-    for (robots.items, 0..) |robot, index| {
-        const new_x = @mod(robot.position.x + robot.velocity.x * step_count, space_size.x);
-        const new_y = @mod(robot.position.y + robot.velocity.y * step_count, space_size.y);
+    const stdin = std.io.getStdIn().reader();
+    var buffer: [100]u8 = undefined;
 
-        const updated_robot = Robot{ .position = Vector{ .x = new_x, .y = new_y }, .velocity = robot.velocity };
-        robots.items[index] = updated_robot;
+    var step_index: usize = 2;
+    while (step_index < space_size.x * space_size.y) : (step_index += space_size.y) {
+        std.debug.print("Step index: {}\n", .{step_index});
+
+        const step_index_isize: isize = @intCast(step_index);
+        var updated_robots = try robots.clone();
+        defer updated_robots.deinit();
+
+        for (robots.items, 0..) |robot, index| {
+            const new_x = @mod(robot.position.x + robot.velocity.x * step_index_isize, space_size.x);
+            const new_y = @mod(robot.position.y + robot.velocity.y * step_index_isize, space_size.y);
+
+            const updated_robot = Robot{ .position = Vector{ .x = new_x, .y = new_y }, .velocity = robot.velocity };
+            updated_robots.items[index] = updated_robot;
+        }
+
+        printSpace(updated_robots.items);
+        std.debug.print("\n", .{});
+        _ = try stdin.readUntilDelimiterOrEof(&buffer, '\n');
     }
 
     var quadrant_counts = [_]usize{ 0, 0, 0, 0 };
@@ -82,7 +98,7 @@ fn printSpace(robots: []Robot) void {
         space[y_usize][x_usize] = 'X';
     }
 
-    for (space) |row| {
-        std.debug.print("{s}\n", .{row});
+    for (space, 0..) |row, index| {
+        std.debug.print("{:3} {s}\n", .{ index, row });
     }
 }
