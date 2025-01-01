@@ -33,17 +33,14 @@ pub fn main() !void {
         try robots.append(Robot{ .position = position, .velocity = velocity });
     }
 
-    const stdin = std.io.getStdIn().reader();
-    var buffer: [100]u8 = undefined;
-
+    var max_count: usize = 0;
+    var max_count_index: usize = 0;
     var step_index: usize = 2;
     while (step_index < space_size.x * space_size.y) : (step_index += space_size.y) {
-        std.debug.print("Step index: {}\n", .{step_index});
-
-        const step_index_isize: isize = @intCast(step_index);
         var updated_robots = try robots.clone();
         defer updated_robots.deinit();
 
+        const step_index_isize: isize = @intCast(step_index);
         for (robots.items, 0..) |robot, index| {
             const new_x = @mod(robot.position.x + robot.velocity.x * step_index_isize, space_size.x);
             const new_y = @mod(robot.position.y + robot.velocity.y * step_index_isize, space_size.y);
@@ -52,10 +49,24 @@ pub fn main() !void {
             updated_robots.items[index] = updated_robot;
         }
 
-        printSpace(updated_robots.items);
-        std.debug.print("\n", .{});
-        _ = try stdin.readUntilDelimiterOrEof(&buffer, '\n');
+        var count: usize = 0;
+        for (updated_robots.items) |robot| {
+            const lower_bound = Vector{ .x = @divFloor(space_size.x, 4), .y = @divFloor(space_size.y, 4) };
+            if (robot.position.x < lower_bound.x or robot.position.y < lower_bound.y) continue;
+
+            const upper_bound = Vector{ .x = 3 * @divFloor(space_size.x, 4), .y = 3 * @divFloor(space_size.y, 4) };
+            if (robot.position.x > upper_bound.x or robot.position.y > upper_bound.y) continue;
+
+            count += 1;
+        }
+
+        if (count > max_count) {
+            max_count = count;
+            max_count_index = step_index;
+        }
     }
+
+    std.debug.print("Christmas tree displayed after {} seconds\n", .{max_count_index});
 
     var quadrant_counts = [_]usize{ 0, 0, 0, 0 };
     for (robots.items) |robot| {
