@@ -3,11 +3,10 @@ const std = @import("std");
 const Vector = struct { x: isize, y: isize };
 const Robot = struct { position: Vector, velocity: Vector };
 
-const filepath = "data/day14.txt";
-const space_size = Vector{ .x = 101, .y = 103 };
-const step_count: usize = 100;
-
 pub fn main() !void {
+    const filepath = "data/day14.txt";
+    const space_size = Vector{ .x = 101, .y = 103 };
+
     const file = try std.fs.cwd().openFile(filepath, .{ .mode = .read_only });
     defer file.close();
 
@@ -33,21 +32,25 @@ pub fn main() !void {
         try robots.append(Robot{ .position = position, .velocity = velocity });
     }
 
-    var part1_updated_robots = std.ArrayList(Robot).init(allocator);
-    defer part1_updated_robots.deinit();
+    const safety_factor = try part1(allocator, robots.items, space_size);
+    std.debug.print("Safety factor: {}\n", .{safety_factor});
 
-    for (robots.items) |robot| {
-        const new_x = @mod(robot.position.x + robot.velocity.x * 100, space_size.x);
-        const new_y = @mod(robot.position.y + robot.velocity.y * 100, space_size.y);
+    const seconds_to_tree = try part2(allocator, robots.items, space_size);
+    std.debug.print("Christmas tree displayed after {} seconds\n", .{seconds_to_tree});
+}
 
-        const updated_robot = Robot{ .position = Vector{ .x = new_x, .y = new_y }, .velocity = robot.velocity };
-        try part1_updated_robots.append(updated_robot);
+fn part1(allocator: std.mem.Allocator, robots: []const Robot, size: Vector) !usize {
+    var updated_robots = std.ArrayList(Robot).init(allocator);
+    defer updated_robots.deinit();
+
+    for (robots) |robot| {
+        try updated_robots.append(updateRobot(robot, 100.0, size));
     }
 
     var quadrant_counts = [_]usize{ 0, 0, 0, 0 };
-    for (part1_updated_robots.items) |robot| {
-        const mid_x = @divFloor(space_size.x, 2);
-        const mid_y = @divFloor(space_size.y, 2);
+    for (updated_robots.items) |robot| {
+        const mid_x = @divFloor(size.x, 2);
+        const mid_y = @divFloor(size.y, 2);
 
         if (robot.position.x == mid_x) continue;
         if (robot.position.y == mid_y) continue;
@@ -68,30 +71,35 @@ pub fn main() !void {
         safety_factor *= count;
     }
 
-    std.debug.print("Safety factor: {}\n", .{safety_factor});
+    return safety_factor;
+}
 
+fn updateRobot(robot: Robot, step_count: isize, size: Vector) Robot {
+    const new_x = @mod(robot.position.x + robot.velocity.x * step_count, size.x);
+    const new_y = @mod(robot.position.y + robot.velocity.y * step_count, size.y);
+
+    return Robot{ .position = Vector{ .x = new_x, .y = new_y }, .velocity = robot.velocity };
+}
+
+fn part2(allocator: std.mem.Allocator, robots: []const Robot, size: Vector) !usize {
     var max_count: usize = 0;
     var max_count_index: usize = 0;
     var step_index: usize = 2;
-    while (step_index < space_size.x * space_size.y) : (step_index += space_size.y) {
-        var updated_robots = try robots.clone();
+    while (step_index < size.x * size.y) : (step_index += 1) {
+        var updated_robots = std.ArrayList(Robot).init(allocator);
         defer updated_robots.deinit();
 
         const step_index_isize: isize = @intCast(step_index);
-        for (robots.items, 0..) |robot, index| {
-            const new_x = @mod(robot.position.x + robot.velocity.x * step_index_isize, space_size.x);
-            const new_y = @mod(robot.position.y + robot.velocity.y * step_index_isize, space_size.y);
-
-            const updated_robot = Robot{ .position = Vector{ .x = new_x, .y = new_y }, .velocity = robot.velocity };
-            updated_robots.items[index] = updated_robot;
+        for (robots) |robot| {
+            try updated_robots.append(updateRobot(robot, step_index_isize, size));
         }
 
         var count: usize = 0;
         for (updated_robots.items) |robot| {
-            const lower_bound = Vector{ .x = @divFloor(space_size.x, 4), .y = @divFloor(space_size.y, 4) };
+            const lower_bound = Vector{ .x = @divFloor(size.x, 4), .y = @divFloor(size.y, 4) };
             if (robot.position.x < lower_bound.x or robot.position.y < lower_bound.y) continue;
 
-            const upper_bound = Vector{ .x = 3 * @divFloor(space_size.x, 4), .y = 3 * @divFloor(space_size.y, 4) };
+            const upper_bound = Vector{ .x = 3 * @divFloor(size.x, 4), .y = 3 * @divFloor(size.y, 4) };
             if (robot.position.x > upper_bound.x or robot.position.y > upper_bound.y) continue;
 
             count += 1;
@@ -103,10 +111,10 @@ pub fn main() !void {
         }
     }
 
-    std.debug.print("Christmas tree displayed after {} seconds\n", .{max_count_index});
+    return max_count_index;
 }
 
-fn printSpace(robots: []Robot) void {
+fn printSpace(robots: []Robot, space_size: Vector) void {
     var space: [space_size.y][space_size.x]u8 = undefined;
     for (&space) |*row| {
         for (row) |*element| {
