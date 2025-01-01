@@ -33,6 +33,43 @@ pub fn main() !void {
         try robots.append(Robot{ .position = position, .velocity = velocity });
     }
 
+    var part1_updated_robots = std.ArrayList(Robot).init(allocator);
+    defer part1_updated_robots.deinit();
+
+    for (robots.items) |robot| {
+        const new_x = @mod(robot.position.x + robot.velocity.x * 100, space_size.x);
+        const new_y = @mod(robot.position.y + robot.velocity.y * 100, space_size.y);
+
+        const updated_robot = Robot{ .position = Vector{ .x = new_x, .y = new_y }, .velocity = robot.velocity };
+        try part1_updated_robots.append(updated_robot);
+    }
+
+    var quadrant_counts = [_]usize{ 0, 0, 0, 0 };
+    for (part1_updated_robots.items) |robot| {
+        const mid_x = @divFloor(space_size.x, 2);
+        const mid_y = @divFloor(space_size.y, 2);
+
+        if (robot.position.x == mid_x) continue;
+        if (robot.position.y == mid_y) continue;
+
+        if (robot.position.x < mid_x) {
+            if (robot.position.y < mid_y) {
+                quadrant_counts[0] += 1;
+            } else quadrant_counts[1] += 1;
+        } else {
+            if (robot.position.y < mid_y) {
+                quadrant_counts[2] += 1;
+            } else quadrant_counts[3] += 1;
+        }
+    }
+
+    var safety_factor: usize = 1;
+    for (quadrant_counts) |count| {
+        safety_factor *= count;
+    }
+
+    std.debug.print("Safety factor: {}\n", .{safety_factor});
+
     var max_count: usize = 0;
     var max_count_index: usize = 0;
     var step_index: usize = 2;
@@ -67,32 +104,6 @@ pub fn main() !void {
     }
 
     std.debug.print("Christmas tree displayed after {} seconds\n", .{max_count_index});
-
-    var quadrant_counts = [_]usize{ 0, 0, 0, 0 };
-    for (robots.items) |robot| {
-        const mid_x = @divFloor(space_size.x, 2);
-        const mid_y = @divFloor(space_size.y, 2);
-
-        if (robot.position.x == mid_x) continue;
-        if (robot.position.y == mid_y) continue;
-
-        if (robot.position.x < mid_x) {
-            if (robot.position.y < mid_y) {
-                quadrant_counts[0] += 1;
-            } else quadrant_counts[1] += 1;
-        } else {
-            if (robot.position.y < mid_y) {
-                quadrant_counts[2] += 1;
-            } else quadrant_counts[3] += 1;
-        }
-    }
-
-    var safety_factor: usize = 1;
-    for (quadrant_counts) |count| {
-        safety_factor *= count;
-    }
-
-    std.debug.print("Safety factor: {}\n", .{safety_factor});
 }
 
 fn printSpace(robots: []Robot) void {
